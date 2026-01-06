@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useChat } from "@ai-sdk/react";
+import { useChat, Message } from "@ai-sdk/react";
 
 import Banner from "./assets/img/Banner.jpg";
 import F1GPTLogo from "./assets/img/sunilProfessional.jpg";
@@ -16,10 +16,12 @@ const Home = () => {
   const noMessages = messages.length === 0;
 
   const handlePrompt = (promptText: string) => {
-    append({
-      role: "user",
+    const msg: Message = {
+      id: crypto.randomUUID(),
+      role: "user", // must match SDK's role type
       content: promptText,
-    });
+    };
+    append(msg);
   };
 
   return (
@@ -52,11 +54,13 @@ const Home = () => {
           e.preventDefault();
           if (!input.trim()) return;
 
-          append({
+          const msg: Message = {
+            id: crypto.randomUUID(),
             role: "user",
             content: input,
-          });
+          };
 
+          append(msg);
           setInput("");
         }}
       >
