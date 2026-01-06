@@ -12,26 +12,26 @@ const {
   ASTRA_DB_APPLICATION_TOKEN,
 } = process.env;
 
-// URLs to scrape
+// --- URLs to scrape ---
 const f1Data = ["https://en.wikipedia.org/wiki/Formula_One"];
 
-// Astra DB client
-const client = new DataAPIClient(ASTRA_DB_APPLICATION_TOKEN as string);
-const db = client.db(ASTRA_DB_API_ENDPOINT as string, {
-  keyspace: ASTRA_DB_NAMESPACE as string, // fixed: keyspace instead of namespace
+// --- Astra DB client ---
+const client = new DataAPIClient(ASTRA_DB_APPLICATION_TOKEN!);
+const db = client.db(ASTRA_DB_API_ENDPOINT!, {
+  keyspace: ASTRA_DB_NAMESPACE!, // updated: keyspace instead of deprecated namespace
 });
 
-// Text splitter
+// --- Text splitter ---
 const splitter = new RecursiveCharacterTextSplitter({
   chunkSize: 512,
   chunkOverlap: 100,
 });
 
-// Create collection
+// --- Create collection ---
 const createCollection = async (
   similarityMetric: SimilarityMetric = "dot_product"
 ) => {
-  const res = await db.createCollection(ASTRA_DB_COLLECTION as string, {
+  const res = await db.createCollection(ASTRA_DB_COLLECTION!, {
     vector: {
       dimension: 1536, // embedding dimension
       metric: similarityMetric,
@@ -40,11 +40,11 @@ const createCollection = async (
   console.log("Collection created:", res);
 };
 
-// Scrape page function
+// --- Scrape page ---
 const scrapePage = async (url: string): Promise<string> => {
   const loader = new PuppeteerWebBaseLoader(url, {
     launchOptions: {
-      headless: "new", // fixes Puppeteer headless warning
+      headless: "new", // fixes deprecation warning
     },
     gotoOptions: {
       waitUntil: "domcontentloaded",
@@ -58,9 +58,9 @@ const scrapePage = async (url: string): Promise<string> => {
   return content?.replace(/<[^>]*>?/gm, "").trim() || "";
 };
 
-// Load sample data with dummy embeddings
+// --- Load sample data with dummy embeddings (avoids OpenAI quota) ---
 const LoadSampleData = async () => {
-  const collection = db.collection(ASTRA_DB_COLLECTION as string);
+  const collection = db.collection(ASTRA_DB_COLLECTION!);
 
   for (const url of f1Data) {
     console.log(`Scraping: ${url}`);
@@ -68,7 +68,7 @@ const LoadSampleData = async () => {
     const chunks = await splitter.splitText(content);
 
     for (const chunk of chunks) {
-      // Use dummy embeddings to avoid OpenAI quota
+      // Dummy vector of 1536 dimensions
       const vector = Array(1536)
         .fill(0)
         .map(() => Math.random());
@@ -78,6 +78,7 @@ const LoadSampleData = async () => {
         text: chunk,
         source: url,
       });
+
       console.log("Inserted chunk for", url);
     }
   }
@@ -85,10 +86,15 @@ const LoadSampleData = async () => {
   console.log("✅ Data loaded into Astra DB (dummy vectors)");
 };
 
-// Top-level execution
+// --- Top-level execution ---
 (async () => {
-  await createCollection();
-  await LoadSampleData();
-  console.log("Seeding complete");
-  process.exit(0);
+  try {
+    await createCollection();
+    await LoadSampleData();
+    console.log("Seeding complete");
+    process.exit(0);
+  } catch (err) {
+    console.error("Seeding failed:", err);
+    process.exit(1);
+  }
 })();
