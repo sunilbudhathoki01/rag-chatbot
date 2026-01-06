@@ -1,7 +1,14 @@
-import React from "react";
+type BubbleProps = {
+  message: {
+    role: "user" | "assistant";
+    content: string;
+  };
+};
 
-const Bubble = ({ message }) => {
-  return <div className="bubble"></div>;
+const Bubble = ({ message }: BubbleProps) => {
+  const { content, role } = message;
+
+  return <div className={`${role} bubble`}>{content}</div>;
 };
 
 export default Bubble;
